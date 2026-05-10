@@ -91,8 +91,7 @@ async def resolve_user_api_key(
         stored: Optional[str] = await Users.get_user_api_key_by_id(user.id)
     except Exception as e:  # pragma: no cover — defensive
         log.warning(
-            'omnizen: failed to look up per-user API key for %s: %s — '
-            'falling back to global key',
+            'omnizen: failed to look up per-user API key for %s: %s — falling back to global key',
             getattr(user, 'id', '<unknown>'),
             e,
         )
@@ -103,8 +102,7 @@ async def resolve_user_api_key(
 
     if not stored.startswith(_OMNIZEN_KEY_PREFIXES):
         log.debug(
-            'omnizen: user %s has a stored API key that does not match '
-            'the Omnizen prefix; passing through unchanged',
+            'omnizen: user %s has a stored API key that does not match the Omnizen prefix; passing through unchanged',
             user.id,
         )
 
