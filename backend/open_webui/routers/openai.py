@@ -1122,7 +1122,7 @@ async def generate_chat_completion(
 
     url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
     key = request.app.state.config.OPENAI_API_KEYS[idx]
-    key = await resolve_user_api_key(user, key)
+    key = await resolve_user_api_key(user, key, request=request)
 
     # Check if model is a reasoning model that needs special handling
     if is_openai_new_model(payload['model']):

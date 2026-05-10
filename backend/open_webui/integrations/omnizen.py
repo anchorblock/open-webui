@@ -9,20 +9,26 @@ the Omnizen LiteLLM proxy at https://api.omnizen.ai/v1 (OpenAI-shape).
 For billing to work correctly, every chat request must hit Omnizen with
 the *user's own* Omnizen API key — not a single shared service key —
 so that spend lands against the right account in Omnizen's
-/dashboard/analytics. OpenWebUI ships with a built-in concept of a
-per-user API key (stored in the `api_key` table, managed via the
-existing /account UI), and we simply reuse that field as the user's
-Omnizen API key.
+/dashboard/analytics. We resolve the right key in two ways, preferred
+first:
 
-This module exposes one function — `resolve_user_api_key` — which is
-called from `routers/openai.py::generate_chat_completion` right after
-the global key is looked up. If the user has stored their own Omnizen
-key in their OpenWebUI account, we substitute it. Otherwise we fall
-through to the global key (preserves admin-test / preview behaviour).
+1. **Forward-auth header** — Caddy at chat.omnizen.ai calls
+   omnizen-ai-web-1's `/api/internal/openwebui-auth` to validate the
+   visitor's Clerk session. That endpoint also looks up the user's
+   ``users.litellm_key`` from Postgres and returns it as
+   ``X-Omnizen-Api-Key``. Caddy ``copy_headers`` injects the header
+   into every proxied request to OpenWebUI. When this header is
+   present we use it directly — no manual paste required.
 
-Failure mode is fail-open: any exception during key lookup logs and
-returns the original global key, so a transient DB hiccup never blocks
-a chat request.
+2. **Local OpenWebUI ``api_key`` table** (legacy) — for users who
+   landed on the chat without going through the forward_auth flow,
+   or for setups where the upstream Omnizen instance hasn't been
+   patched yet, we still honour a key the user pasted in
+   ``/account → API Keys``.
+
+Failure mode is fail-open: any exception during lookup logs and
+returns the global ``fallback_key``, so a transient DB / header
+hiccup never blocks a chat request.
 """
 
 from __future__ import annotations
@@ -39,15 +45,40 @@ log = logging.getLogger(__name__)
 # doesn't *look* like an Omnizen key.
 _OMNIZEN_KEY_PREFIXES = ('om_', 'sk-om_')
 
+# Header set by Caddy (forwarded from omnizen-ai's
+# /api/internal/openwebui-auth). Always lowercase here because Starlette
+# normalises header names.
+_OMNIZEN_API_KEY_HEADER = 'x-omnizen-api-key'
 
-async def resolve_user_api_key(user: Any, fallback_key: str) -> str:
+
+async def resolve_user_api_key(
+    user: Any,
+    fallback_key: str,
+    request: Optional[Any] = None,
+) -> str:
     """
     Return the API key to use for an upstream Omnizen call.
 
-    Looks up `user`'s stored API key via Users.get_user_api_key_by_id.
-    Falls back to `fallback_key` (the global OPENAI_API_KEYS[idx]) on
-    any miss or error.
+    Resolution order:
+      1. ``X-Omnizen-Api-Key`` header on the inbound request (set by
+         Caddy ``forward_auth`` from omnizen-ai's
+         ``/api/internal/openwebui-auth`` after Clerk validation).
+      2. ``Users.get_user_api_key_by_id(user.id)`` — legacy paste-it
+         flow.
+      3. ``fallback_key`` — the configured global ``OPENAI_API_KEY``.
     """
+    # 1. Forward-auth header (preferred — fully zero-paste UX)
+    if request is not None:
+        try:
+            headers = getattr(request, 'headers', None)
+            if headers is not None:
+                hdr = headers.get(_OMNIZEN_API_KEY_HEADER)
+                if hdr:
+                    return hdr
+        except Exception as e:  # pragma: no cover — defensive
+            log.warning('omnizen: header lookup raised %s', e)
+
+    # 2. Local OpenWebUI api_key table (legacy paste-flow)
     if user is None or not getattr(user, 'id', None):
         return fallback_key
 
