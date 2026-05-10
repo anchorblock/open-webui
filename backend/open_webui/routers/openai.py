@@ -28,6 +28,7 @@ from open_webui.internal.db import get_async_session
 from open_webui.models.models import Models
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.groups import Groups
+from open_webui.integrations.omnizen import resolve_user_api_key
 from open_webui.utils.access_control import has_connection_access, check_model_access
 from open_webui.config import (
     CACHE_DIR,
@@ -1121,6 +1122,7 @@ async def generate_chat_completion(
 
     url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
     key = request.app.state.config.OPENAI_API_KEYS[idx]
+    key = await resolve_user_api_key(user, key, request=request)
 
     # Check if model is a reasoning model that needs special handling
     if is_openai_new_model(payload['model']):
