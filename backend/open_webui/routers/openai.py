@@ -392,10 +392,20 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
             api_keys += [''] * (num_urls - num_keys)
             request.app.state.config.OPENAI_API_KEYS = api_keys
 
+    # Resolve the per-request user key (X-Omnizen-Api-Key header from
+    # Caddy forward_auth) so the model-listing call uses the visitor's
+    # credentials. Without this, get_models_request would use the empty
+    # globally-configured key and api.omnizen.ai/v1/models would refuse
+    # the request — making the model dropdown perpetually empty.
+    resolved_keys = [
+        await resolve_user_api_key(user, api_keys[idx], request=request)
+        for idx in range(len(api_base_urls))
+    ]
+
     request_tasks = []
     for idx, url in enumerate(api_base_urls):
         if (str(idx) not in api_configs) and (url not in api_configs):  # Legacy support
-            request_tasks.append(get_models_request(request, url, api_keys[idx], user=user))
+            request_tasks.append(get_models_request(request, url, resolved_keys[idx], user=user))
         else:
             api_config = api_configs.get(
                 str(idx),
@@ -407,7 +417,7 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
 
             if enable:
                 if len(model_ids) == 0:
-                    request_tasks.append(get_models_request(request, url, api_keys[idx], user=user, config=api_config))
+                    request_tasks.append(get_models_request(request, url, resolved_keys[idx], user=user, config=api_config))
                 else:
                     model_list = {
                         'object': 'list',
