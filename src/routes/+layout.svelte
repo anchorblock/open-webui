@@ -851,6 +851,42 @@
 	};
 
 	onMount(async () => {
+		// Self-heal: if the SPA boots on /api/internal/* (forward_auth's
+		// internal surface — should never be a browser-visible route),
+		// SvelteKit can't match it and renders the 404 error page even
+		// though the user is authed. Rewrite the URL bar to / before any
+		// other onMount logic runs so the chat UI renders. The replaceState
+		// keeps history clean (no extra back-button entries).
+		try {
+			const p = window.location.pathname;
+			if (p.startsWith('/api/internal/') || p.startsWith('/api/v1/auths/signin')) {
+				window.history.replaceState({}, '', '/');
+			}
+		} catch {
+			/* no window — should not happen client-side */
+		}
+
+		// One-time cleanup of stale localStorage state from earlier broken
+		// loops. If redirectPath was poisoned with /api/internal/* or any
+		// other path the SPA can't render, every subsequent signin would
+		// goto(badPath) and dead-end on the SvelteKit 404 page. Strip it
+		// before any redirect/signin logic runs.
+		try {
+			const rp = localStorage.getItem('redirectPath');
+			if (
+				rp &&
+				(rp.startsWith('/api/') ||
+					rp.startsWith('/_app/') ||
+					rp.startsWith('/static/') ||
+					!rp.startsWith('/') ||
+					rp.startsWith('//'))
+			) {
+				localStorage.removeItem('redirectPath');
+			}
+		} catch {
+			/* localStorage disabled — fall through */
+		}
+
 		window.addEventListener('message', windowMessageEventHandler);
 
 		let touchstartY = 0;

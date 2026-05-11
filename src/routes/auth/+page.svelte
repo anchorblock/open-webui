@@ -63,6 +63,22 @@
 				redirectPath = $page.url.searchParams.get('redirect') || '/';
 			}
 
+			// Defensive: refuse to navigate to internal/API paths or
+			// off-origin URLs. Earlier loops poisoned localStorage with
+			// redirectPath=/api/internal/openwebui-auth (Caddy forward_auth
+			// target) which 404s here. Reset to '/' for anything that
+			// isn't a normal app path.
+			if (
+				typeof redirectPath !== 'string' ||
+				!redirectPath.startsWith('/') ||
+				redirectPath.startsWith('//') ||
+				redirectPath.startsWith('/api/') ||
+				redirectPath.startsWith('/_app/') ||
+				redirectPath.startsWith('/static/')
+			) {
+				redirectPath = '/';
+			}
+
 			goto(redirectPath);
 			localStorage.removeItem('redirectPath');
 		}
