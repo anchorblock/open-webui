@@ -620,15 +620,41 @@
 
 			<hr class=" border-gray-50/30 dark:border-gray-800/30 my-1 p-0" />
 
+			<!-- Omnizen dashboard quick-link — single click out of chat into
+			     billing / usage / keys without a re-sign-in. Same-domain Clerk
+			     session covers both, so no auth handshake needed. -->
+			<a
+				href="https://omnizen.ai/dashboard"
+				draggable="false"
+				class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer select-none"
+				on:click={() => { show = false; }}
+			>
+				<div class=" self-center mr-3">
+					<Settings className="w-5 h-5" strokeWidth="1.5" />
+				</div>
+				<div class=" self-center truncate">Omnizen Dashboard</div>
+			</a>
+
 			<button
 				class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer select-none"
 				type="button"
 				on:click={async () => {
-					const res = await userSignOut();
+					// Hijack OpenWebUI's logout. Clearing only its own JWT
+					// cookie leaves the user signed into Clerk on omnizen.ai —
+					// Caddy forward_auth would silently re-auth them and the
+					// SPA would never reflect a logged-out state. Instead,
+					// drop local SPA state, then redirect to Clerk's sign-out
+					// on omnizen.ai which clears the Clerk session +
+					// omnizen_session cookie domain-wide and lands the user on
+					// the public landing page.
+					try {
+						await userSignOut();
+					} catch {
+						/* ignore — we're leaving the SPA anyway */
+					}
 					user.set(null);
-					localStorage.removeItem('token');
-
-					location.href = res?.redirect_url ?? '/auth';
+					try { localStorage.removeItem('token'); } catch {}
+					location.href = 'https://omnizen.ai/sign-out';
 					show = false;
 				}}
 			>
