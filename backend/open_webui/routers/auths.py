@@ -582,17 +582,34 @@ async def signin(
             except Exception as e:
                 pass
 
+        # OMNIZEN: pull profile image URL from forward_auth header so the
+        # avatar in the chat sidebar matches the user's Clerk/Google photo
+        # instead of OpenWebUI's generated initials. Optional — missing
+        # header falls back to the default /user.png.
+        omnizen_avatar = (request.headers.get('x-omnizen-profile-image') or '').strip() or None
+
         if not await Users.get_user_by_email(email.lower(), db=db):
             await signup_handler(
                 request,
                 email,
                 str(uuid.uuid4()),
                 name,
+                profile_image_url=omnizen_avatar or '/user.png',
                 db=db,
             )
 
         user = await Auths.authenticate_user_by_email(email, db=db)
         if user:
+            # Keep avatar in sync on every signin — Clerk user.imageUrl can
+            # change (user updates their Google photo, etc.).
+            if omnizen_avatar and user.profile_image_url != omnizen_avatar:
+                try:
+                    await Users.update_user_by_id(
+                        user.id, {'profile_image_url': omnizen_avatar}, db=db,
+                    )
+                except Exception as e:
+                    log.warning('omnizen: avatar sync failed for %s: %s', user.id, e)
+
             if WEBUI_AUTH_TRUSTED_GROUPS_HEADER:
                 group_names = request.headers.get(WEBUI_AUTH_TRUSTED_GROUPS_HEADER, '').split(',')
                 group_names = [name.strip() for name in group_names if name.strip()]

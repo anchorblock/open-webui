@@ -107,6 +107,9 @@
 	$: pinnedItems = $settings?.pinnedMenuItems ?? DEFAULT_PINNED_ITEMS;
 
 	const isMenuItemVisible = (id) => {
+		// OMNIZEN: minimal chat surface — only Notes is pinnable in the
+		// sidebar. Workspace / Automations / Calendar / Playground stay
+		// in the codebase for later but are not surfaced as nav items.
 		switch (id) {
 			case 'notes':
 				return (
@@ -114,25 +117,10 @@
 					($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))
 				);
 			case 'workspace':
-				return (
-					$user?.role === 'admin' ||
-					$user?.permissions?.workspace?.models ||
-					$user?.permissions?.workspace?.knowledge ||
-					$user?.permissions?.workspace?.prompts ||
-					$user?.permissions?.workspace?.tools
-				);
 			case 'automations':
-				return (
-					$config?.features?.enable_automations &&
-					($user?.role === 'admin' || $user?.permissions?.features?.automations)
-				);
 			case 'calendar':
-				return (
-					$config?.features?.enable_calendar &&
-					($user?.role === 'admin' || $user?.permissions?.features?.calendar)
-				);
 			case 'playground':
-				return $user?.role === 'admin';
+				return false;
 			default:
 				return false;
 		}
