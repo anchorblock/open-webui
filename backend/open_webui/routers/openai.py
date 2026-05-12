@@ -398,8 +398,7 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
     # globally-configured key and api.omnizen.ai/v1/models would refuse
     # the request — making the model dropdown perpetually empty.
     resolved_keys = [
-        await resolve_user_api_key(user, api_keys[idx], request=request)
-        for idx in range(len(api_base_urls))
+        await resolve_user_api_key(user, api_keys[idx], request=request) for idx in range(len(api_base_urls))
     ]
 
     request_tasks = []
@@ -417,7 +416,9 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
 
             if enable:
                 if len(model_ids) == 0:
-                    request_tasks.append(get_models_request(request, url, resolved_keys[idx], user=user, config=api_config))
+                    request_tasks.append(
+                        get_models_request(request, url, resolved_keys[idx], user=user, config=api_config)
+                    )
                 else:
                     model_list = {
                         'object': 'list',

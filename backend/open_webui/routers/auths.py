@@ -605,7 +605,9 @@ async def signin(
             if omnizen_avatar and user.profile_image_url != omnizen_avatar:
                 try:
                     await Users.update_user_by_id(
-                        user.id, {'profile_image_url': omnizen_avatar}, db=db,
+                        user.id,
+                        {'profile_image_url': omnizen_avatar},
+                        db=db,
                     )
                 except Exception as e:
                     log.warning('omnizen: avatar sync failed for %s: %s', user.id, e)
