@@ -234,38 +234,21 @@
 				<hr class=" border-gray-50/30 dark:border-gray-800/30 my-1.5 p-0" />
 			{/if}
 
-			<button
-				class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer select-none"
-				type="button"
-				on:click={async () => {
-					show = false;
-
-					await showSettings.set(true);
-
-					if ($mobile) {
-						await tick();
-						showSidebar.set(false);
-					}
-				}}
-			>
-				<div class=" self-center mr-3">
-					<Settings className="w-5 h-5" strokeWidth="1.5" />
-				</div>
-				<div class=" self-center truncate">{$i18n.t('Settings')}</div>
-			</button>
-
-			{#if role === 'admin'}
-				<a
-					href="/admin"
-					draggable="false"
+			<!--
+			   OMNIZEN: hide OpenWebUI's user menu items (Settings, Admin
+			   Panel, Archived Chats). Admin functions live on
+			   omnizen.ai/dashboard; the user menu here is intentionally
+			   minimal — just Omnizen Dashboard + Sign Out (below).
+			-->
+			{#if false}
+				<button
 					class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer select-none"
-					on:click={async (e) => {
-						if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) {
-							return;
-						}
-						e.preventDefault();
+					type="button"
+					on:click={async () => {
 						show = false;
-						goto('/admin');
+
+						await showSettings.set(true);
+
 						if ($mobile) {
 							await tick();
 							showSidebar.set(false);
@@ -273,36 +256,63 @@
 					}}
 				>
 					<div class=" self-center mr-3">
-						<UserGroup className="w-5 h-5" strokeWidth="1.5" />
+						<Settings className="w-5 h-5" strokeWidth="1.5" />
 					</div>
-					<div class=" self-center truncate">{$i18n.t('Admin Panel')}</div>
-				</a>
+					<div class=" self-center truncate">{$i18n.t('Settings')}</div>
+				</button>
+
+				{#if role === 'admin'}
+					<a
+						href="/admin"
+						draggable="false"
+						class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer select-none"
+						on:click={async (e) => {
+							if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) {
+								return;
+							}
+							e.preventDefault();
+							show = false;
+							goto('/admin');
+							if ($mobile) {
+								await tick();
+								showSidebar.set(false);
+							}
+						}}
+					>
+						<div class=" self-center mr-3">
+							<UserGroup className="w-5 h-5" strokeWidth="1.5" />
+						</div>
+						<div class=" self-center truncate">{$i18n.t('Admin Panel')}</div>
+					</a>
+				{/if}
+
+				<button
+					class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer select-none"
+					type="button"
+					on:click={async () => {
+						show = false;
+
+						dispatch('show', 'archived-chat');
+
+						if ($mobile) {
+							await tick();
+
+							showSidebar.set(false);
+						}
+					}}
+				>
+					<div class=" self-center mr-3">
+						<ArchiveBox className="size-5" strokeWidth="1.5" />
+					</div>
+					<div class=" self-center truncate">{$i18n.t('Archived Chats')}</div>
+				</button>
+
+				<hr class=" border-gray-50/30 dark:border-gray-800/30 my-1 p-0" />
 			{/if}
 
-			<button
-				class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer select-none"
-				type="button"
-				on:click={async () => {
-					show = false;
-
-					dispatch('show', 'archived-chat');
-
-					if ($mobile) {
-						await tick();
-
-						showSidebar.set(false);
-					}
-				}}
-			>
-				<div class=" self-center mr-3">
-					<ArchiveBox className="size-5" strokeWidth="1.5" />
-				</div>
-				<div class=" self-center truncate">{$i18n.t('Archived Chats')}</div>
-			</button>
-
-			<hr class=" border-gray-50/30 dark:border-gray-800/30 my-1 p-0" />
-
-			{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models || $user?.permissions?.workspace?.knowledge || $user?.permissions?.workspace?.prompts || $user?.permissions?.workspace?.tools}
+			<!-- OMNIZEN: hide Workspace from user menu; model/knowledge/prompt
+			     management surfaces live on omnizen.ai/dashboard instead. -->
+			{#if false && ($user?.role === 'admin' || $user?.permissions?.workspace?.models || $user?.permissions?.workspace?.knowledge || $user?.permissions?.workspace?.prompts || $user?.permissions?.workspace?.tools)}
 				<div class="flex items-center w-full">
 					<a
 						href="/workspace"
@@ -403,7 +413,9 @@
 				</div>
 			{/if}
 
-			{#if $config?.features?.enable_calendar && ($user?.role === 'admin' || $user?.permissions?.features?.calendar)}
+			<!-- OMNIZEN: Calendar / Automations / Playground hidden — not part of the
+			     minimal chat surface. Backend left intact in case we re-enable. -->
+			{#if false && $config?.features?.enable_calendar && ($user?.role === 'admin' || $user?.permissions?.features?.calendar)}
 				<div class="flex items-center w-full">
 					<a
 						href="/calendar"
@@ -456,7 +468,7 @@
 				</div>
 			{/if}
 
-			{#if $config?.features?.enable_automations && ($user?.role === 'admin' || $user?.permissions?.features?.automations)}
+			{#if false && $config?.features?.enable_automations && ($user?.role === 'admin' || $user?.permissions?.features?.automations)}
 				<div class="flex items-center w-full">
 					<a
 						href="/automations"
@@ -513,7 +525,7 @@
 				</div>
 			{/if}
 
-			{#if role === 'admin'}
+			{#if false && role === 'admin'}
 				<div class="flex items-center w-full">
 					<a
 						href="/playground"
@@ -557,7 +569,8 @@
 				</div>
 			{/if}
 
-			{#if help}
+			<!-- OMNIZEN: hide upstream Help links (docs.openwebui.com, releases). -->
+			{#if false && help}
 				<hr class=" border-gray-50/30 dark:border-gray-800/30 my-1 p-0" />
 
 				<!-- {$i18n.t('Help')} -->
